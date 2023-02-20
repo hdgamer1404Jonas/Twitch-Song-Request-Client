@@ -18,13 +18,13 @@ async function start() {
         } else {
             console.log(chalk.red("Config file is not filled. Please fill it before starting the application."));
             console.log(chalk.red("Exiting..."));
-            process.exit();
+            process.kill(process.pid, 'SIGTERM');
         }
     } else {
         await configUtils.createConfig();
         console.log(chalk.green("Config file created. Please fill it before starting the application."));
         console.log(chalk.green("Exiting..."));
-        process.exit();
+        process.kill(process.pid, 'SIGTERM');
     }
 }
 
@@ -38,7 +38,7 @@ async function socket() {
         console.log(chalk.red(`Socket server error: ${err}`));
         console.log(chalk.red("Is the Port already in use?"));
         console.log(chalk.red("Exiting..."));
-        process.exit();
+        process.kill(process.pid, 'SIGTERM');
     })
 
     socketServer.on("connection", (socket) => {
