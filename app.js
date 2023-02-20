@@ -41,6 +41,10 @@ async function socket() {
         process.exit();
     })
 
+    socketServer.on("connection", (socket) => {
+        console.log(chalk.green(`New socket connection from ${socket._socket.remoteAddress}`));
+    });
+
     // Get the IP address of the machine
     const networkInterfaces = os.networkInterfaces();
     const addresses = [];
@@ -93,33 +97,35 @@ async function twitch() {
         if(!message.startsWith("!")) return;
         const args = message.slice(1).trim().split(/ +/g);
         if (args[0] === "bsr") {
-            //if (socketServer.clients.size === 0) return twitchClient.say(channel, "The owner of this channel is currently not playing Beat Saber. Please try again later. If you are the owner of this channel, please make sure BS is running and you entered the correct IP address in the config file.");
+            if (socketServer.clients.size === 0) return twitchClient.say(channel, "The owner of this channel is currently not playing Beat Saber. Please try again later. If you are the owner of this channel, please make sure BS is running and you entered the correct IP address in the config file.");
             if(!args[1]) return twitchClient.say(channel, "No song id provided. Please provide a song id.");
             
             const songId = args[1];
 
             const beastsaverapilink = `https://api.beatsaver.com/maps/id/${songId}`;
 
+            let data = '';
+            let response = '';
 
             await https.get(beastsaverapilink, async (res) => {
-                let body = "";
-            
-                await res.on("data", (chunk) => {
-                    body += chunk;
+                res.on("data", async (d) => {data+=d});
+                res.on("end", async () => {
+                    response = await JSON.parse(data);
+                    console.log(response);
+                    if(response.error) return twitchClient.say(channel, "No song found with this id. Please provide a valid song id.");
+                    const songnName = response.metadata.songName;
+                    const songAuthorName = response.metadata.songAuthorName;
+
+                    const songName = `${songnName} - by ${songAuthorName}`;
+
+                    twitchClient.say(channel, `Requested song: ${songName} (${songId})`);
+
+                    socketServer.clients.forEach(async (client) => {
+                        if (client.readyState === ws.OPEN) {
+                            client.send(songId);
+                        }
+                    });
                 });
-            
-                await res.on("end", async () => {
-                    try {
-                        //TODO: FIX JSON
-                        let json = await JSON.parse(body);
-                        console.log(json);
-                    } catch (error) {
-                        console.error(error.message);
-                    };
-                });
-            
-            }).on("error", (error) => {
-                console.error(error.message);
             });
         }
     });
