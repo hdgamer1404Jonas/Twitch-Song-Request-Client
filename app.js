@@ -111,7 +111,6 @@ async function twitch() {
                 res.on("data", async (d) => {data+=d});
                 res.on("end", async () => {
                     response = await JSON.parse(data);
-                    console.log(response);
                     if(response.error) return twitchClient.say(channel, "No song found with this id. Please provide a valid song id.");
                     const songnName = response.metadata.songName;
                     const songAuthorName = response.metadata.songAuthorName;
